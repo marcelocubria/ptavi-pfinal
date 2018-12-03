@@ -10,13 +10,11 @@ import sys
 # Cliente UDP simple.
 
 try:
-    PETICION = sys.argv[1]
-    UA_RECEPTOR = sys.argv[2]
-    RECEPTOR = UA_RECEPTOR.split('@')[0]
-    IP = UA_RECEPTOR.split('@')[1].split(':')[0]
-    PORT = int(UA_RECEPTOR.split(':')[1])
+    config = sys.argv[1]
+    METODO = sys.argv[2]
+    OPCION = sys.argv[3]
 except (IndexError, ValueError):
-    sys.exit("Usage: python3 client.py method receiver@IP:SIPport")
+    sys.exit("Usage: python uaclient.py config metodo opcion")
 
 
 # Contenido que vamos a enviar

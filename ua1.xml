@@ -1,0 +1,16 @@
+<!ELEMENT config (account, uaserver, rtpaudio, regproxy, log, audio)>
+<!ELEMENT account EMPTY>
+<!ATTLIST account username CDATA #REQUIRED>
+<!ATTLIST account passwd CDATA #REQUIRED>
+<!ELEMENT uaserver EMPTY>
+<!ATTLIST uaserver ip CDATA #IMPLIED>
+<!ATTLIST uaserver puerto CDATA #REQUIRED>
+<!ELEMENT rtpaudio EMPTY>
+<!ATTLIST rtpaudio puerto CDATA #REQUIRED>
+<!ELEMENT regproxy EMPTY>
+<!ATTLIST regproxy ip CDATA #REQUIRED>
+<!ATTLIST regproxy puerto CDATA #REQUIRED>
+<!ELEMENT log EMPTY>
+<!ATTLIST log path CDATA #REQUIRED>
+<!ELEMENT audio EMPTY>
+<!ATTLIST audio path CDATA #REQUIRED>
