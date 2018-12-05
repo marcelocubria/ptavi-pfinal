@@ -44,7 +44,10 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
 
     print("Enviando: " + linea)
     my_socket.send(bytes(linea, 'utf-8') + b'\r\n')
-    data = my_socket.recv(1024)
+    try:
+        data = my_socket.recv(1024)
+    except ConnectionRefusedError:
+        sys.exit("conexion rechazada")
 
     print('Recibido -- ', data.decode('utf-8'))
     respuesta_server = data.decode('utf-8')
