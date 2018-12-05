@@ -6,3 +6,6 @@ Created on Mon Dec  3 09:42:15 2018
 @author: mcubria
 """
 
+import time
+
+hora = time.strftime("%Y%m%d%H%M%S", time.localtime(int(time.time())))
