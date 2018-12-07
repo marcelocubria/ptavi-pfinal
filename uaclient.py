@@ -9,8 +9,15 @@ import sys
 from xml.dom import minidom
 import time
 
-def escribe_log(linea):
-    
+def escribe_log(linea, tipo):
+    if tipo == "envio":
+        print("envio")
+    elif tipo == "recibo":
+        print("recibo")
+    elif tipo == "error":
+        print("error")
+    else:
+        print("otros")
 
 try:
     config = sys.argv[1]
