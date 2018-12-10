@@ -1,11 +1,11 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
-"""
-Created on Mon Dec  3 09:42:15 2018
 
-@author: mcubria
-"""
+import sys
 
-import time
+try:
+    config = sys.argv[1]
+except IndexError:
+    sys.exit("Usage: python uaserver.py config")
 
-hora = time.strftime("%Y%m%d%H%M%S", time.localtime(int(time.time())))
+print("Listening...")
