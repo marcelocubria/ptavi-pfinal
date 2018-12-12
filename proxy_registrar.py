@@ -3,8 +3,10 @@
 
 import sys
 import time
-import minidom
+from xml.dom import minidom
 import socketserver
+import hashlib
+import json
 
 def escribe_log(linea, tipo, ippuerto = 0):
     hora = time.strftime("%Y%m%d%H%M%S", time.localtime())
@@ -18,12 +20,65 @@ def escribe_log(linea, tipo, ippuerto = 0):
     else:
         linea_log = linea
     mi_log.write(hora + " " + linea_log + "\r\n")
+
     
 class ServerHandler(socketserver.DatagramRequestHandler):
     
-
+    dicc_registro = {}
+    passwords = {}
+    
     def handle(self):
-        self.elimina_expires()
+        while 1:
+            self.json2passwd()
+            # Leyendo línea a línea lo que nos envía el cliente
+            line = self.rfile.read().decode('utf-8')
+            # Si no hay más líneas salimos del bucle infinito
+            if not line:
+                break
+            datos = line.split(" ")
+            info_usuario = {}
+            if datos[0] == 'REGISTER':
+                print("Llega " + line[:-4])
+                receptor = datos[1].split(':')[1].split('@')[0]
+                usuario = datos[1].split(':')[1]
+                ip_ua = datos[1].split('@')[1]
+                expires = datos[-1][:-4]
+                if line[:-4] == ("REGISTER sip:" + receptor + "@" + ip_ua +
+                                 " SIP/2.0\r\nExpires: " + expires):
+                    passwd_cliente = self.passwords[usuario]
+                    print(passwd_cliente)
+                    nonce = hashlib.sha256()
+                    nonce.update(passwd_cliente) 
+                    #nonce.update()
+                    respuesta_reg = "SIP/2.0 401 Unauthorized\r\n"
+                    respuesta_reg += 'WW Authenticate: Digest nonce=" '
+                    self.wfile.write(bytes(respuesta_reg, 'utf-8'))
+                    
+                    info_usuario["address"] = self.client_address[0]
+                    self.dicc_registro[usuario] = info_usuario
+                    tiempo_fin = time.strftime('%Y-%m-%d %H:%M:%S',
+                                               time.gmtime(time.time() + int(expires)))
+                    self.dicc_registro[usuario]["expires"] = tiempo_fin
+                    if expires == 0:
+                        del self.dicc_registro[usuario] 
+                else:
+                    self.wfile.write(b"SIP/2.0 400 Bad request\r\n\r\n")  
+            elif datos[0] == 'ACK':
+                print("llega " + line)
+                aEjecutar = ('mp32rtp -i 127.0.0.1 -p 23032 < ' + FICH_AUDIO)
+                print("ejecutando " + aEjecutar)
+                os.system(aEjecutar)
+            elif datos[0] == 'BYE':
+                print("llega " + line)
+                receptor = datos[1].split(':')[1].split('@')[0]
+                ip_ua = datos[1].split('@')[1]
+                if line[:-4] == (datos[0] + " sip:" + receptor + "@" + ip_ua +
+                                 " SIP/2.0"):
+                    self.wfile.write(b"SIP/2.0 200 OK\r\n\r\n")
+                else:
+                    self.wfile.write(b"SIP/2.0 400 Bad request\r\n\r\n")
+            else:
+                self.wfile.write(b"SIP/2.0 405 Method Not Allowed")
     
     def elimina_expires(self):
         """elimina clientes que han expirado en el diccionario"""
@@ -32,6 +87,14 @@ class ServerHandler(socketserver.DatagramRequestHandler):
         for usuario in list(self.dicc_registro.keys()):
             if hora_actual >= self.dicc_registro[usuario]['expires']:
                 del self.dicc_registro[usuario]
+    
+    def json2passwd(self):
+        try:
+            with open("passwords.json") as f:
+                datos_json = json.load(f)
+                self.passwords = datos_json
+        except:
+            pass
 
 if __name__ == "__main__":
     try:
@@ -53,6 +116,7 @@ if __name__ == "__main__":
     if mi_IP == '':
         mi_IP = "127.0.0.1"
     mi_puerto = int(xml_server[0].attributes['puerto'].value)
+    escribe_log("Starting...", "otro")
     
     serv = socketserver.UDPServer((mi_IP, mi_puerto), ServerHandler)
     print("Listening...")

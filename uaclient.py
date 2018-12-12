@@ -8,6 +8,7 @@ import socket
 import sys
 from xml.dom import minidom
 import time
+import hashlib
 
 def escribe_log(linea, tipo, ippuerto = 0):
     hora = time.strftime("%Y%m%d%H%M%S", time.localtime())
@@ -20,7 +21,7 @@ def escribe_log(linea, tipo, ippuerto = 0):
         linea_log = ("Error: " + linea)
     else:
         linea_log = linea
-    mi_log.write(hora + " " + linea_log + "\r\n")
+    mi_log.write(hora + " " + str(linea_log) + "\r\n")
 
 try:
     config = sys.argv[1]
@@ -56,37 +57,39 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
     my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     my_socket.connect((IP_regproxy, puerto_regproxy))
 
-    linea = (METODO + " sip:" + mi_usuario + ":" + mi_puerto + " SIP/2.0\r\n"
-             + "Expires: " + OPCION + "\r\n")
-
-    print("Enviando: " + linea)
-    my_socket.send(bytes(linea, 'utf-8') + b'\r\n')
-    #dir_regproxy = (IP_regproxy + ":" + puerto_regproxy)
-    escribe_log(linea, "envio", IP_regproxy + ":" + str(puerto_regproxy))
-    try:
-        data = my_socket.recv(1024)
-    except ConnectionRefusedError:
-        escribe_log("No server listening at "+ IP_regproxy + " port " +
-                    str(puerto_regproxy), "error")
-        sys.exit("conexion rechazada")
-
-    print('Recibido -- ', data.decode('utf-8'))
-    respuesta_server = data.decode('utf-8')
-    escribe_log(respuesta_server, "recibo", IP_regproxy + ":" + str(puerto_regproxy))
-    if respuesta_server == ("SIP/2.0 100 Trying\r\n\r\n" +
-                            "SIP/2.0 180 Ringing\r\n\r\n" +
-                            "SIP/2.0 200 OK\r\n\r\n"):
-        linea = ("ACK sip:" + RECEPTOR + "@" + IP + " SIP/2.0\r\n")
+    if METODO == "register":
+        linea = ("REGISTER sip:" + mi_usuario + ":" + mi_puerto + " SIP/2.0\r\n"
+                 + "Expires: " + OPCION + "\r\n")
+    
         print("Enviando: " + linea)
         my_socket.send(bytes(linea, 'utf-8') + b'\r\n')
+        #dir_regproxy = (IP_regproxy + ":" + puerto_regproxy)
         escribe_log(linea, "envio", IP_regproxy + ":" + str(puerto_regproxy))
-    elif respuesta_server == ("SIP/2.0 401 Unathorized\r\n" + 
-                              "WW Authenticate: Digest nonce=" +
-                              "898989898798989898989"):
-        linea = (METODO + " sip:" + mi_usuario + ":" + mi_puerto + 
-                 " SIP/2.0\r\n" + "Expires: " + OPCION + "\r\n" + 
-                 "Authorization: Digest response=123123212312321212123\r\n")
-        escribe_log(linea, "envio", IP_regproxy + ":" + str(puerto_regproxy))
+        try:
+            data = my_socket.recv(1024)
+        except ConnectionRefusedError:
+            escribe_log("No server listening at "+ IP_regproxy + " port " +
+                        str(puerto_regproxy), "error")
+            sys.exit("conexion rechazada")
+    
+        print('Recibido -- ', data.decode('utf-8'))
+        respuesta_server = data.decode('utf-8')
+        escribe_log(respuesta_server, "recibo", IP_regproxy + ":" + str(puerto_regproxy))
+        if respuesta_server == ("SIP/2.0 100 Trying\r\n\r\n" +
+                                "SIP/2.0 180 Ringing\r\n\r\n" +
+                                "SIP/2.0 200 OK\r\n\r\n"):
+            linea = ("ACK sip:" + RECEPTOR + "@" + IP + " SIP/2.0\r\n")
+            print("Enviando: " + linea)
+            my_socket.send(bytes(linea, 'utf-8') + b'\r\n')
+            escribe_log(linea, "envio", IP_regproxy + ":" + str(puerto_regproxy))
+        elif respuesta_server == ("SIP/2.0 401 Unathorized\r\n" + 
+                                  "WW Authenticate: Digest nonce=" +
+                                  "898989898798989898989"):
+            mi_hash = hashlib.sha224("").hexdigest()
+            linea = (METODO + " sip:" + mi_usuario + ":" + mi_puerto + 
+                     " SIP/2.0\r\n" + "Expires: " + OPCION + "\r\n" + 
+                     "Authorization: Digest response=123123212312321212123\r\n")
+            escribe_log(linea, "envio", IP_regproxy + ":" + str(puerto_regproxy))
 
     print("Terminando socket...")
 
