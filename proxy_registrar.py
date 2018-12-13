@@ -7,6 +7,7 @@ from xml.dom import minidom
 import socketserver
 import hashlib
 import json
+import random
 
 def escribe_log(linea, tipo, ippuerto = 0):
     hora = time.strftime("%Y%m%d%H%M%S", time.localtime())
@@ -14,7 +15,7 @@ def escribe_log(linea, tipo, ippuerto = 0):
     if tipo == "envio":
         linea_log = ("Sent to " + ippuerto + ": " + linea)
     elif tipo == "recibo":
-        linea_log = ()
+        linea_log = ("Received from " + ippuerto + ": " + linea)
     elif tipo == "error":
         linea_log = ("Error: " + linea)
     else:
@@ -26,6 +27,7 @@ class ServerHandler(socketserver.DatagramRequestHandler):
     
     dicc_registro = {}
     passwords = {}
+    nonce = []
     
     def handle(self):
         while 1:
@@ -42,25 +44,36 @@ class ServerHandler(socketserver.DatagramRequestHandler):
                 receptor = datos[1].split(':')[1].split('@')[0]
                 usuario = datos[1].split(':')[1]
                 ip_ua = datos[1].split('@')[1]
-                expires = datos[-1][:-4]
+                expires = datos[3].split('\r')[0]
+                escribe_log(line, "recibo", ip_ua)
                 if line[:-4] == ("REGISTER sip:" + receptor + "@" + ip_ua +
                                  " SIP/2.0\r\nExpires: " + expires):
                     passwd_cliente = self.passwords[usuario]
-                    print(passwd_cliente)
-                    nonce = hashlib.sha256()
-                    nonce.update(passwd_cliente) 
-                    #nonce.update()
+                    numero = str(random.getrandbits(128))
+                    n = hashlib.sha256()
+                    n.update(passwd_cliente.encode('utf-8')) 
+                    n.update(numero.encode('utf-8'))
+                    self.nonce.append(n.hexdigest())
                     respuesta_reg = "SIP/2.0 401 Unauthorized\r\n"
-                    respuesta_reg += 'WW Authenticate: Digest nonce=" '
+                    respuesta_reg += 'WWW Authenticate: Digest nonce="'
+                    respuesta_reg += (numero + '"\r\n\r\n')
                     self.wfile.write(bytes(respuesta_reg, 'utf-8'))
-                    
+                    escribe_log(respuesta_reg, "envio", ip_ua)
                     info_usuario["address"] = self.client_address[0]
                     self.dicc_registro[usuario] = info_usuario
                     tiempo_fin = time.strftime('%Y-%m-%d %H:%M:%S',
                                                time.gmtime(time.time() + int(expires)))
                     self.dicc_registro[usuario]["expires"] = tiempo_fin
                     if expires == 0:
-                        del self.dicc_registro[usuario] 
+                        del self.dicc_registro[usuario]
+                elif line[:-4] == ("REGISTER sip:" + receptor + "@" + ip_ua +
+                                 " SIP/2.0\r\nExpires: " + expires + "\r\n" +
+                                 'Authorization: Digest response="' + self.nonce[0] + '"'):
+                    respuesta_ok = "SIP/2.0 100 Trying\r\n\r\n"
+                    respuesta_ok += "SIP/2.0 180 Ringing\r\n\r\n"
+                    respuesta_ok += "SIP/2.0 200 OK\r\n\r\n"
+                    self.wfile.write(bytes(respuesta_ok, 'utf-8'))
+                    escribe_log(respuesta_ok, "envio", ip_ua)
                 else:
                     self.wfile.write(b"SIP/2.0 400 Bad request\r\n\r\n")  
             elif datos[0] == 'ACK':

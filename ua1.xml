@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 
 <config>
-    <account username = 'usuario1@server1'  passwd = 'passwd1' />
+    <account username = 'usuario1@server1'  passwd = '1234' />
     <uaserver ip = '' puerto = '9999' />
     <rtpaudio puerto = '6666' />
     <regproxy ip = '127.0.0.1' puerto = '5555' />

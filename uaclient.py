@@ -16,7 +16,7 @@ def escribe_log(linea, tipo, ippuerto = 0):
     if tipo == "envio":
         linea_log = ("Sent to " + ippuerto + ": " + linea)
     elif tipo == "recibo":
-        linea_log = ()
+        linea_log = ("Received from " + ippuerto + ": " + linea)
     elif tipo == "error":
         linea_log = ("Error: " + linea)
     else:
@@ -35,6 +35,7 @@ archivo_xml = minidom.parse(config)
 account = archivo_xml.getElementsByTagName('account')
 uaserver= archivo_xml.getElementsByTagName('uaserver')
 mi_usuario = account[0].attributes['username'].value
+mi_passwd = account[0].attributes['passwd'].value
 mi_IP = uaserver[0].attributes['ip'].value
 if mi_IP == '':
     mi_IP = "127.0.0.1"
@@ -82,13 +83,17 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
             print("Enviando: " + linea)
             my_socket.send(bytes(linea, 'utf-8') + b'\r\n')
             escribe_log(linea, "envio", IP_regproxy + ":" + str(puerto_regproxy))
-        elif respuesta_server == ("SIP/2.0 401 Unathorized\r\n" + 
-                                  "WW Authenticate: Digest nonce=" +
-                                  "898989898798989898989"):
-            mi_hash = hashlib.sha224("").hexdigest()
-            linea = (METODO + " sip:" + mi_usuario + ":" + mi_puerto + 
+        elif respuesta_server[:24] == ("SIP/2.0 401 Unauthorized"):
+            numero = respuesta_server.split('"')[1]
+            n = hashlib.sha256()
+            n.update(mi_passwd.encode('utf-8')) 
+            n.update(numero.encode('utf-8'))
+            nonce = n.hexdigest()
+            linea = ("REGISTER sip:" + mi_usuario + ":" + mi_puerto + 
                      " SIP/2.0\r\n" + "Expires: " + OPCION + "\r\n" + 
-                     "Authorization: Digest response=123123212312321212123\r\n")
+                     'Authorization: Digest response="' + nonce + '"\r\n')
+            print("Enviando: " + linea)
+            my_socket.send(bytes(linea, 'utf-8') + b'\r\n')
             escribe_log(linea, "envio", IP_regproxy + ":" + str(puerto_regproxy))
 
     print("Terminando socket...")
