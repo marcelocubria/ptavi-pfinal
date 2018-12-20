@@ -40,6 +40,8 @@ mi_IP = uaserver[0].attributes['ip'].value
 if mi_IP == '':
     mi_IP = "127.0.0.1"
 mi_puerto = uaserver[0].attributes['puerto'].value
+rtpaudio = archivo_xml.getElementsByTagName('rtpaudio')
+puerto_RTP = rtpaudio[0].attributes['puerto'].value
 
 #obtengo informacion del servidor regproxy y me conecto
 regproxy = archivo_xml.getElementsByTagName('regproxy')
@@ -64,7 +66,6 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
     
         print("Enviando: " + linea)
         my_socket.send(bytes(linea, 'utf-8') + b'\r\n')
-        #dir_regproxy = (IP_regproxy + ":" + puerto_regproxy)
         escribe_log(linea, "envio", IP_regproxy + ":" + str(puerto_regproxy))
         try:
             data = my_socket.recv(1024)
@@ -76,14 +77,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
         print('Recibido -- ', data.decode('utf-8'))
         respuesta_server = data.decode('utf-8')
         escribe_log(respuesta_server, "recibo", IP_regproxy + ":" + str(puerto_regproxy))
-        if respuesta_server == ("SIP/2.0 100 Trying\r\n\r\n" +
-                                "SIP/2.0 180 Ringing\r\n\r\n" +
-                                "SIP/2.0 200 OK\r\n\r\n"):
-            linea = ("ACK sip:" + RECEPTOR + "@" + IP + " SIP/2.0\r\n")
-            print("Enviando: " + linea)
-            my_socket.send(bytes(linea, 'utf-8') + b'\r\n')
-            escribe_log(linea, "envio", IP_regproxy + ":" + str(puerto_regproxy))
-        elif respuesta_server[:24] == ("SIP/2.0 401 Unauthorized"):
+        if respuesta_server[:24] == ("SIP/2.0 401 Unauthorized"):
             numero = respuesta_server.split('"')[1]
             n = hashlib.sha256()
             n.update(mi_passwd.encode('utf-8')) 
@@ -95,6 +89,37 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
             print("Enviando: " + linea)
             my_socket.send(bytes(linea, 'utf-8') + b'\r\n')
             escribe_log(linea, "envio", IP_regproxy + ":" + str(puerto_regproxy))
+            
+            print('Recibido -- ', data.decode('utf-8'))
+            respuesta_server = data.decode('utf-8')
+            escribe_log(respuesta_server, "recibo", IP_regproxy + ":" + str(puerto_regproxy))
+    elif METODO == "invite":
+        linea = ("INVITE sip:" + OPCION + " SIP/2.0\r\n"
+                 + "Content-type: application/sdp\r\n\r\n" +
+                 "v=0\r\n" + "o=" + mi_usuario + " " + mi_IP +"\r\n" +
+                 "s=misesion\r\n" + "t=0\r\n" + "m=audio " + puerto_RTP +
+                 " RTP\r\n")
+        print("Enviando: " + linea)
+        my_socket.send(bytes(linea, 'utf-8') + b'\r\n')
+        escribe_log(linea, "envio", IP_regproxy + ":" + str(puerto_regproxy))
+        try:
+            data = my_socket.recv(1024)
+        except ConnectionRefusedError:
+            escribe_log("No server listening at "+ IP_regproxy + " port " +
+                        str(puerto_regproxy), "error")
+            sys.exit("conexion rechazada")
+        
+        print('Recibido -- ', data.decode('utf-8'))
+        respuesta_server = data.decode('utf-8')
+        escribe_log(respuesta_server, "recibo", IP_regproxy + ":" + str(puerto_regproxy))
+        if respuesta_server == ("SIP/2.0 100 Trying\r\n\r\n" +
+                                "SIP/2.0 180 Ringing\r\n\r\n" +
+                                "SIP/2.0 200 OK\r\n\r\n"):
+            linea = ("ACK sip:" + OPCION + " SIP/2.0\r\n")
+            print("Enviando: " + linea)
+            my_socket.send(bytes(linea, 'utf-8') + b'\r\n')
+            escribe_log(linea, "envio", IP_regproxy + ":" + str(puerto_regproxy))
+        
 
     print("Terminando socket...")
 

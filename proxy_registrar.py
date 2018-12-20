@@ -59,23 +59,38 @@ class ServerHandler(socketserver.DatagramRequestHandler):
                     respuesta_reg += (numero + '"\r\n\r\n')
                     self.wfile.write(bytes(respuesta_reg, 'utf-8'))
                     escribe_log(respuesta_reg, "envio", ip_ua)
-                    info_usuario["address"] = self.client_address[0]
-                    self.dicc_registro[usuario] = info_usuario
-                    tiempo_fin = time.strftime('%Y-%m-%d %H:%M:%S',
-                                               time.gmtime(time.time() + int(expires)))
-                    self.dicc_registro[usuario]["expires"] = tiempo_fin
                     if expires == 0:
                         del self.dicc_registro[usuario]
                 elif line[:-4] == ("REGISTER sip:" + receptor + "@" + ip_ua +
                                  " SIP/2.0\r\nExpires: " + expires + "\r\n" +
                                  'Authorization: Digest response="' + self.nonce[0] + '"'):
-                    respuesta_ok = "SIP/2.0 100 Trying\r\n\r\n"
-                    respuesta_ok += "SIP/2.0 180 Ringing\r\n\r\n"
-                    respuesta_ok += "SIP/2.0 200 OK\r\n\r\n"
+                    respuesta_ok = "SIP/2.0 200 OK\r\n\r\n"
                     self.wfile.write(bytes(respuesta_ok, 'utf-8'))
                     escribe_log(respuesta_ok, "envio", ip_ua)
+                    
+                    info_usuario['usuario'] = usuario
+                    info_usuario["IP"] = self.client_address[0]
+                    info_usuario['puerto'] = self.client_address[1]
+                    self.dicc_registro[usuario] = info_usuario
+                    tiempo_inicio = time.strftime('%Y-%m-%d %H:%M:%S',
+                                               time.gmtime(time.time()))
+                    self.dicc_registro[usuario]["inicio"] = tiempo_inicio
+                    tiempo_fin = time.strftime('%Y-%m-%d %H:%M:%S',
+                                               time.gmtime(time.time() + int(expires)))
+                    self.dicc_registro[usuario]["expires"] = tiempo_fin
                 else:
                     self.wfile.write(b"SIP/2.0 400 Bad request\r\n\r\n")  
+            elif datos[0] == 'INVITE':
+                print("Llega " + line[:-4])
+                info = line.split('=')
+                ua_envia = info[2].split(' ')[0]
+                ua_recibe = datos[1].split(':')[1]
+                print(self.dicc_registro)
+                if ua_envia in self.dicc_registro:
+                    print("esta registrado el que envia")
+                    if ua_recibe in self.dicc_registro:
+                        print("esta registrado el que recibe")
+                        print(ua_recibe)
             elif datos[0] == 'ACK':
                 print("llega " + line)
                 aEjecutar = ('mp32rtp -i 127.0.0.1 -p 23032 < ' + FICH_AUDIO)
