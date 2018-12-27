@@ -32,6 +32,7 @@ class ServerHandler(socketserver.DatagramRequestHandler):
     def handle(self):
         while 1:
             self.json2passwd()
+            self.json2registered()
             # Leyendo línea a línea lo que nos envía el cliente
             line = self.rfile.read().decode('utf-8')
             # Si no hay más líneas salimos del bucle infinito
@@ -39,13 +40,14 @@ class ServerHandler(socketserver.DatagramRequestHandler):
                 break
             datos = line.split(" ")
             info_usuario = {}
+            ip_port_ua = (self.client_address[0] + ":" + str(self.client_address[1]))
             if datos[0] == 'REGISTER':
-                print("Llega " + line[:-4])
+                print("Llega " + line)
                 receptor = datos[1].split(':')[1].split('@')[0]
                 usuario = datos[1].split(':')[1]
                 ip_ua = datos[1].split('@')[1]
                 expires = datos[3].split('\r')[0]
-                escribe_log(line, "recibo", ip_ua)
+                escribe_log(line, "recibo", ip_port_ua)
                 if line[:-4] == ("REGISTER sip:" + receptor + "@" + ip_ua +
                                  " SIP/2.0\r\nExpires: " + expires):
                     passwd_cliente = self.passwords[usuario]
@@ -58,7 +60,7 @@ class ServerHandler(socketserver.DatagramRequestHandler):
                     respuesta_reg += 'WWW Authenticate: Digest nonce="'
                     respuesta_reg += (numero + '"\r\n\r\n')
                     self.wfile.write(bytes(respuesta_reg, 'utf-8'))
-                    escribe_log(respuesta_reg, "envio", ip_ua)
+                    escribe_log(respuesta_reg, "envio", ip_port_ua)
                     if expires == 0:
                         del self.dicc_registro[usuario]
                 elif line[:-4] == ("REGISTER sip:" + receptor + "@" + ip_ua +
@@ -66,11 +68,11 @@ class ServerHandler(socketserver.DatagramRequestHandler):
                                  'Authorization: Digest response="' + self.nonce[0] + '"'):
                     respuesta_ok = "SIP/2.0 200 OK\r\n\r\n"
                     self.wfile.write(bytes(respuesta_ok, 'utf-8'))
-                    escribe_log(respuesta_ok, "envio", ip_ua)
+                    escribe_log(respuesta_ok, "envio", ip_port_ua)
                     
                     info_usuario['usuario'] = usuario
                     info_usuario["IP"] = self.client_address[0]
-                    info_usuario['puerto'] = self.client_address[1]
+                    info_usuario['puerto'] = datos[1].split(":")[2]
                     self.dicc_registro[usuario] = info_usuario
                     tiempo_inicio = time.strftime('%Y-%m-%d %H:%M:%S',
                                                time.gmtime(time.time()))
@@ -78,19 +80,17 @@ class ServerHandler(socketserver.DatagramRequestHandler):
                     tiempo_fin = time.strftime('%Y-%m-%d %H:%M:%S',
                                                time.gmtime(time.time() + int(expires)))
                     self.dicc_registro[usuario]["expires"] = tiempo_fin
+                    del(self.nonce[0])
                 else:
-                    self.wfile.write(b"SIP/2.0 400 Bad request\r\n\r\n")  
+                    self.wfile.write(b"SIP/2.0 400 Bad request\r\n\r\n")
+                self.register2json()
             elif datos[0] == 'INVITE':
-                print("Llega " + line[:-4])
-                info = line.split('=')
-                ua_envia = info[2].split(' ')[0]
+                print("Llega " + line)
                 ua_recibe = datos[1].split(':')[1]
-                print(self.dicc_registro)
-                if ua_envia in self.dicc_registro:
-                    print("esta registrado el que envia")
-                    if ua_recibe in self.dicc_registro:
-                        print("esta registrado el que recibe")
-                        print(ua_recibe)
+                escribe_log(line, "recibo", ip_port_ua)
+                ip_recibe = self.dicc_registro[ua_recibe]['IP']
+                puerto_recibe = self.dicc_registro[ua_recibe]['puerto']
+                escribe_log(line, "envio", ip_recibe + ':' + str(puerto_recibe))
             elif datos[0] == 'ACK':
                 print("llega " + line)
                 aEjecutar = ('mp32rtp -i 127.0.0.1 -p 23032 < ' + FICH_AUDIO)
@@ -123,6 +123,18 @@ class ServerHandler(socketserver.DatagramRequestHandler):
                 self.passwords = datos_json
         except:
             pass
+        
+    def json2registered(self):
+        try:
+            with open("registered.json") as f:
+                datos_json = json.load(f)
+                self.dicc_registro = datos_json
+        except:
+            pass
+        
+    def register2json(self):
+        with open("registered.json", 'w') as file:
+            json.dump(self.dicc_registro, file)
 
 if __name__ == "__main__":
     try:
