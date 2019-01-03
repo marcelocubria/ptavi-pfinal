@@ -8,6 +8,7 @@ import socketserver
 import hashlib
 import json
 import random
+import socket
 
 def escribe_log(linea, tipo, ippuerto = 0):
     hora = time.strftime("%Y%m%d%H%M%S", time.localtime())
@@ -90,7 +91,12 @@ class ServerHandler(socketserver.DatagramRequestHandler):
                 escribe_log(line, "recibo", ip_port_ua)
                 ip_recibe = self.dicc_registro[ua_recibe]['IP']
                 puerto_recibe = self.dicc_registro[ua_recibe]['puerto']
-                escribe_log(line, "envio", ip_recibe + ':' + str(puerto_recibe))
+                
+                with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
+                    my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                    my_socket.connect((ip_recibe, puerto_recibe))
+                    escribe_log(line, "envio", ip_recibe + ':' + str(puerto_recibe))
+                    my_socket.send(line)
             elif datos[0] == 'ACK':
                 print("llega " + line)
                 aEjecutar = ('mp32rtp -i 127.0.0.1 -p 23032 < ' + FICH_AUDIO)
