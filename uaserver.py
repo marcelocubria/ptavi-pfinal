@@ -38,7 +38,7 @@ class UAHandler(socketserver.DatagramRequestHandler):
                 respuesta_invite += ("SIP/2.0 200 OK\r\n")
                 self.wfile.write(bytes(respuesta_invite, 'utf-8'))
                 escribe_log(respuesta_invite, "envio", ip_port_rp)
-
+                print("recibo y respondo")
 if __name__ == "__main__":
     try:
         config = sys.argv[1]
@@ -57,7 +57,7 @@ if __name__ == "__main__":
         mi_IP = "127.0.0.1"
     mi_puerto = uaserver[0].attributes['puerto'].value
     
-    serv = socketserver.UDPServer((mi_IP, mi_puerto), UAHandler)
+    serv = socketserver.UDPServer((mi_IP, int(mi_puerto)), UAHandler)
     try:
         serv.serve_forever()
     except KeyboardInterrupt:
