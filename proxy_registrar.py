@@ -91,13 +91,11 @@ class ServerHandler(socketserver.DatagramRequestHandler):
                 escribe_log(line, "recibo", ip_port_ua)
                 ip_recibe = self.dicc_registro[ua_recibe]['IP']
                 puerto_recibe = self.dicc_registro[ua_recibe]['puerto']
-                
                 with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
                     my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                     my_socket.connect((ip_recibe, int(puerto_recibe)))
                     escribe_log(line, "envio", ip_recibe + ':' + str(puerto_recibe))
                     my_socket.send(bytes(line, 'utf-8'))
-                    print("entro aqui")
                     try:
                         data = my_socket.recv(1024)
                     except ConnectionRefusedError:
@@ -107,15 +105,20 @@ class ServerHandler(socketserver.DatagramRequestHandler):
                     print('Recibido -- ', data.decode('utf-8'))
                     respuesta_ua = data.decode('utf-8')
                     escribe_log(respuesta_ua, "recibo", ip_recibe + ":" + str(puerto_recibe))
-                    my_socket.connect((self.client_address[0], self.client_address[1]))
-                    my_socket.send(data)
-                    escribe_log(respuesta_ua, "envio", ip_port_ua)
+                self.wfile.write(data)
+                escribe_log(respuesta_ua, "envio", ip_port_ua)
                     
             elif datos[0] == 'ACK':
-                print("llega " + line)
-                aEjecutar = ('mp32rtp -i 127.0.0.1 -p 23032 < ' + FICH_AUDIO)
-                print("ejecutando " + aEjecutar)
-                os.system(aEjecutar)
+                print("Llega " + line)
+                ua_recibe = datos[1].split(':')[1]
+                escribe_log(line, "recibo", ip_port_ua)
+                ip_recibe = self.dicc_registro[ua_recibe]['IP']
+                puerto_recibe = self.dicc_registro[ua_recibe]['puerto']
+                with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
+                    my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                    my_socket.connect((ip_recibe, int(puerto_recibe)))
+                    escribe_log(line, "envio", ip_recibe + ':' + str(puerto_recibe))
+                    my_socket.send(bytes(line, 'utf-8'))
             elif datos[0] == 'BYE':
                 print("llega " + line)
                 receptor = datos[1].split(':')[1].split('@')[0]

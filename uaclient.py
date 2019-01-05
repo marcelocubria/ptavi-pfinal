@@ -9,6 +9,7 @@ import sys
 from xml.dom import minidom
 import time
 import hashlib
+import os
 
 def escribe_log(linea, tipo, ippuerto = 0):
     hora = time.strftime("%Y%m%d%H%M%S", time.localtime())
@@ -50,6 +51,8 @@ puerto_regproxy = int(regproxy[0].attributes['puerto'].value)
 
 xml_log = archivo_xml.getElementsByTagName('log')
 ruta_log = xml_log[0].attributes['path'].value
+xml_audio = archivo_xml.getElementsByTagName('audio')
+audio_path = xml_audio[0].attributes['path'].value
     
 # Contenido que vamos a enviar
 # Creamos el socket, lo configuramos y lo atamos a un servidor/puerto
@@ -119,6 +122,12 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
             print("Enviando: " + linea)
             my_socket.send(bytes(linea, 'utf-8') + b'\r\n')
             escribe_log(linea, "envio", IP_regproxy + ":" + str(puerto_regproxy))
+            aEjecutar = ("mp32rtp -i 127.0.0.1 -p " + "2222" + " < "
+                             + audio_path)
+            print("ejecutando " + aEjecutar)
+            os.system(aEjecutar)
+    else:
+        print("metodo no valido")
         
 
     print("Terminando socket...")
