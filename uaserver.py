@@ -6,6 +6,7 @@ import sys
 from xml.dom import minidom
 import time
 import socketserver
+import os
 
 def escribe_log(linea, tipo, ippuerto = 0):
     hora = time.strftime("%Y%m%d%H%M%S", time.localtime())
@@ -21,6 +22,7 @@ def escribe_log(linea, tipo, ippuerto = 0):
     mi_log.write(hora + " " + str(linea_log) + "\r\n")
     
 class UAHandler(socketserver.DatagramRequestHandler):
+    ua_port = [0]
     
     def handle(self):
         while 1:
@@ -44,6 +46,13 @@ class UAHandler(socketserver.DatagramRequestHandler):
                 self.wfile.write(bytes(respuesta_invite, 'utf-8'))
                 escribe_log(respuesta_invite, "envio", ip_port_rp)
                 print("recibo y respondo")
+                self.ua_port[0] = datos[5]
+            elif datos[0] == 'ACK':
+                print("llega ack")
+                aEjecutar = ("mp32rtp -i 127.0.0.1 -p " + "2222" + " < "
+                             + audio_path)
+                print("ejecutando " + aEjecutar)
+                os.system(aEjecutar)
 if __name__ == "__main__":
     try:
         config = sys.argv[1]
@@ -63,6 +72,8 @@ if __name__ == "__main__":
     mi_puerto = uaserver[0].attributes['puerto'].value
     account_xml = archivo_xml.getElementsByTagName('account')
     mi_usuario = account_xml[0].attributes['username'].value
+    xml_audio = archivo_xml.getElementsByTagName('audio')
+    audio_path = xml_audio[0].attributes['path'].value
     
     serv = socketserver.UDPServer((mi_IP, int(mi_puerto)), UAHandler)
     try:

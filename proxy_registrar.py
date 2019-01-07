@@ -89,24 +89,28 @@ class ServerHandler(socketserver.DatagramRequestHandler):
                 print("Llega " + line)
                 ua_recibe = datos[1].split(':')[1]
                 escribe_log(line, "recibo", ip_port_ua)
-                ip_recibe = self.dicc_registro[ua_recibe]['IP']
-                puerto_recibe = self.dicc_registro[ua_recibe]['puerto']
-                with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
-                    my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                    my_socket.connect((ip_recibe, int(puerto_recibe)))
-                    escribe_log(line, "envio", ip_recibe + ':' + str(puerto_recibe))
-                    my_socket.send(bytes(line, 'utf-8'))
-                    try:
-                        data = my_socket.recv(1024)
-                    except ConnectionRefusedError:
-                        escribe_log("No server listening at "+ ip_recibe
-                                    + " port " + str(puerto_recibe), "error")
-                        pass
-                    print('Recibido -- ', data.decode('utf-8'))
-                    respuesta_ua = data.decode('utf-8')
-                    escribe_log(respuesta_ua, "recibo", ip_recibe + ":" + str(puerto_recibe))
-                self.wfile.write(data)
-                escribe_log(respuesta_ua, "envio", ip_port_ua)
+                try:
+                    ip_recibe = self.dicc_registro[ua_recibe]['IP']
+                    puerto_recibe = self.dicc_registro[ua_recibe]['puerto']
+                    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
+                        my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                        my_socket.connect((ip_recibe, int(puerto_recibe)))
+                        escribe_log(line, "envio", ip_recibe + ':' + str(puerto_recibe))
+                        my_socket.send(bytes(line, 'utf-8'))
+                        try:
+                            data = my_socket.recv(1024)
+                        except ConnectionRefusedError:
+                            escribe_log("No server listening at "+ ip_recibe
+                                        + " port " + str(puerto_recibe), "error")
+                            pass
+                        print('Recibido -- ', data.decode('utf-8'))
+                        respuesta_ua = data.decode('utf-8')
+                        escribe_log(respuesta_ua, "recibo", ip_recibe + ":" + str(puerto_recibe))
+                    self.wfile.write(data)
+                except KeyError:
+                    respuesta_ua = "SIP/2.0 404 User not found\r\n\r\n"
+                    self.wfile.write(bytes(respuesta_ua, 'utf-8'))
+                    escribe_log(respuesta_ua, "envio", ip_port_ua)
                     
             elif datos[0] == 'ACK':
                 print("Llega " + line)

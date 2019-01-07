@@ -105,19 +105,13 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
         print("Enviando: " + linea)
         my_socket.send(bytes(linea, 'utf-8') + b'\r\n')
         escribe_log(linea, "envio", IP_regproxy + ":" + str(puerto_regproxy))
-        try:
-            data = my_socket.recv(1024)
-        except ConnectionRefusedError:
-            escribe_log("No server listening at "+ IP_regproxy + " port " +
-                        str(puerto_regproxy), "error")
-            sys.exit("conexion rechazada")
-        
+        data = my_socket.recv(1024)
         print('Recibido -- ', data.decode('utf-8'))
         respuesta_server = data.decode('utf-8')
+        datos = respuesta_server.split(" ")
         escribe_log(respuesta_server, "recibo", IP_regproxy + ":" + str(puerto_regproxy))
-        if respuesta_server == ("SIP/2.0 100 Trying\r\n\r\n" +
-                                "SIP/2.0 180 Ringing\r\n\r\n" +
-                                "SIP/2.0 200 OK\r\n\r\n"):
+        print(len(datos))
+        if len(datos) == 11 and datos[5] == "200":
             linea = ("ACK sip:" + OPCION + " SIP/2.0\r\n")
             print("Enviando: " + linea)
             my_socket.send(bytes(linea, 'utf-8') + b'\r\n')
