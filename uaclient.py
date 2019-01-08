@@ -58,13 +58,13 @@ audio_path = xml_audio[0].attributes['path'].value
 # Creamos el socket, lo configuramos y lo atamos a un servidor/puerto
 with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
     
-    mi_log = open(ruta_log, "w")
+    mi_log = open(ruta_log, "a")
     escribe_log("Starting...", "otro")
     my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     my_socket.connect((IP_regproxy, puerto_regproxy))
 
     if METODO == "register":
-        linea = ("REGISTER sip:" + mi_usuario + ":" + mi_puerto + " SIP/2.0\r\n"
+        linea = ("REGISTER sip:" +mi_usuario + ":" + mi_puerto + " SIP/2.0\r\n"
                  + "Expires: " + OPCION + "\r\n")
     
         print("Enviando: " + linea)
@@ -79,7 +79,8 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
     
         print('Recibido -- ', data.decode('utf-8'))
         respuesta_server = data.decode('utf-8')
-        escribe_log(respuesta_server, "recibo", IP_regproxy + ":" + str(puerto_regproxy))
+        escribe_log(respuesta_server, "recibo", IP_regproxy + ":"
+                    + str(puerto_regproxy))
         if respuesta_server[:24] == ("SIP/2.0 401 Unauthorized"):
             numero = respuesta_server.split('"')[1]
             n = hashlib.sha256()
@@ -91,11 +92,13 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
                      'Authorization: Digest response="' + nonce + '"\r\n')
             print("Enviando: " + linea)
             my_socket.send(bytes(linea, 'utf-8') + b'\r\n')
-            escribe_log(linea, "envio", IP_regproxy + ":" + str(puerto_regproxy))
-            
+            escribe_log(linea, "envio", IP_regproxy + ":" +
+                        str(puerto_regproxy))
+            data = my_socket.recv(1024)
             print('Recibido -- ', data.decode('utf-8'))
             respuesta_server = data.decode('utf-8')
-            escribe_log(respuesta_server, "recibo", IP_regproxy + ":" + str(puerto_regproxy))
+            escribe_log(respuesta_server, "recibo", IP_regproxy + ":"
+                        + str(puerto_regproxy))
     elif METODO == "invite":
         linea = ("INVITE sip:" + OPCION + " SIP/2.0\r\n"
                  + "Content-type: application/sdp\r\n\r\n" +
@@ -109,17 +112,26 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
         print('Recibido -- ', data.decode('utf-8'))
         respuesta_server = data.decode('utf-8')
         datos = respuesta_server.split(" ")
-        escribe_log(respuesta_server, "recibo", IP_regproxy + ":" + str(puerto_regproxy))
-        print(len(datos))
+        escribe_log(respuesta_server, "recibo", IP_regproxy + ":" 
+                    + str(puerto_regproxy))
         if len(datos) == 11 and datos[5] == "200":
+            ip_destino = datos[8].split('\r')[0]
             linea = ("ACK sip:" + OPCION + " SIP/2.0\r\n")
             print("Enviando: " + linea)
             my_socket.send(bytes(linea, 'utf-8') + b'\r\n')
-            escribe_log(linea, "envio", IP_regproxy + ":" + str(puerto_regproxy))
-            aEjecutar = ("mp32rtp -i 127.0.0.1 -p " + "2222" + " < "
+            escribe_log(linea, "envio", IP_regproxy + ":" 
+                        + str(puerto_regproxy))
+            aEjecutar = ("mp32rtp -i " + ip_destino + " -p " + datos[9] + " < "
                              + audio_path)
             print("ejecutando " + aEjecutar)
             os.system(aEjecutar)
+    elif METODO == "bye":
+        linea = ("BYE sip:" + OPCION + " SIP/2.0\r\n")
+        print("Enviando: " + linea)
+        my_socket.send(bytes(linea, 'utf-8') + b'\r\n')
+        escribe_log(linea, "envio", IP_regproxy + ":" + str(puerto_regproxy))
+        data = my_socket.recv(1024)
+        print('Recibido -- ', data.decode('utf-8'))
     else:
         print("metodo no valido")
         

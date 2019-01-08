@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 
 <config>
-    <server name = 'ServidorFBI'  ip = '127.0.0.1' puerto = '5555' />
+    <server name = 'ServidorFBI'  ip = '127.0.0.1' puerto = '2865' />
     <database path = 'database.txt' passwdpath = 'passwords.json' />
     <log path = 'log_pr.txt' />
 </config>

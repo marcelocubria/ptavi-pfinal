@@ -41,7 +41,8 @@ class ServerHandler(socketserver.DatagramRequestHandler):
                 break
             datos = line.split(" ")
             info_usuario = {}
-            ip_port_ua = (self.client_address[0] + ":" + str(self.client_address[1]))
+            ip_port_ua = (self.client_address[0] + ":"
+                          + str(self.client_address[1]))
             if datos[0] == 'REGISTER':
                 print("Llega " + line)
                 receptor = datos[1].split(':')[1].split('@')[0]
@@ -66,7 +67,8 @@ class ServerHandler(socketserver.DatagramRequestHandler):
                         del self.dicc_registro[usuario]
                 elif line[:-4] == ("REGISTER sip:" + receptor + "@" + ip_ua +
                                  " SIP/2.0\r\nExpires: " + expires + "\r\n" +
-                                 'Authorization: Digest response="' + self.nonce[0] + '"'):
+                                 'Authorization: Digest response="' +
+                                 self.nonce[0] + '"'):
                     respuesta_ok = "SIP/2.0 200 OK\r\n\r\n"
                     self.wfile.write(bytes(respuesta_ok, 'utf-8'))
                     escribe_log(respuesta_ok, "envio", ip_port_ua)
@@ -79,7 +81,8 @@ class ServerHandler(socketserver.DatagramRequestHandler):
                                                time.gmtime(time.time()))
                     self.dicc_registro[usuario]["inicio"] = tiempo_inicio
                     tiempo_fin = time.strftime('%Y-%m-%d %H:%M:%S',
-                                               time.gmtime(time.time() + int(expires)))
+                                               time.gmtime(time.time()
+                                               + int(expires)))
                     self.dicc_registro[usuario]["expires"] = tiempo_fin
                     del(self.nonce[0])
                 else:
@@ -95,18 +98,21 @@ class ServerHandler(socketserver.DatagramRequestHandler):
                     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
                         my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                         my_socket.connect((ip_recibe, int(puerto_recibe)))
-                        escribe_log(line, "envio", ip_recibe + ':' + str(puerto_recibe))
+                        escribe_log(line, "envio", ip_recibe + ':' +
+                                    str(puerto_recibe))
                         my_socket.send(bytes(line, 'utf-8'))
                         try:
                             data = my_socket.recv(1024)
+                            print('Recibido -- ', data.decode('utf-8'))
+                            respuesta_ua = data.decode('utf-8')
+                            escribe_log(respuesta_ua, "recibo", ip_recibe + ":"
+                                        + str(puerto_recibe))
+                            self.wfile.write(data)
+                            escribe_log(respuesta_ua, "envio", ip_port_ua)
                         except ConnectionRefusedError:
-                            escribe_log("No server listening at "+ ip_recibe
-                                        + " port " + str(puerto_recibe), "error")
+                            escribe_log("No server listening at "+ ip_recibe +
+                                        " port " + str(puerto_recibe), "error")
                             pass
-                        print('Recibido -- ', data.decode('utf-8'))
-                        respuesta_ua = data.decode('utf-8')
-                        escribe_log(respuesta_ua, "recibo", ip_recibe + ":" + str(puerto_recibe))
-                    self.wfile.write(data)
                 except KeyError:
                     respuesta_ua = "SIP/2.0 404 User not found\r\n\r\n"
                     self.wfile.write(bytes(respuesta_ua, 'utf-8'))
@@ -118,20 +124,36 @@ class ServerHandler(socketserver.DatagramRequestHandler):
                 escribe_log(line, "recibo", ip_port_ua)
                 ip_recibe = self.dicc_registro[ua_recibe]['IP']
                 puerto_recibe = self.dicc_registro[ua_recibe]['puerto']
+                with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sckt2:
+                    sckt2.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                    sckt2.connect((ip_recibe, int(puerto_recibe)))
+                    escribe_log(line, "envio", ip_recibe + ':' +
+                                str(puerto_recibe))
+                    sckt2.send(bytes(line, 'utf-8'))
+            elif datos[0] == 'BYE':
+                print("Llega " + line)
+                ua_recibe = datos[1].split(':')[1]
+                escribe_log(line, "recibo", ip_port_ua)
+                ip_recibe = self.dicc_registro[ua_recibe]['IP']
+                puerto_recibe = self.dicc_registro[ua_recibe]['puerto']
                 with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
                     my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                     my_socket.connect((ip_recibe, int(puerto_recibe)))
-                    escribe_log(line, "envio", ip_recibe + ':' + str(puerto_recibe))
+                    escribe_log(line, "envio", ip_recibe + ':' +
+                                str(puerto_recibe))
                     my_socket.send(bytes(line, 'utf-8'))
-            elif datos[0] == 'BYE':
-                print("llega " + line)
-                receptor = datos[1].split(':')[1].split('@')[0]
-                ip_ua = datos[1].split('@')[1]
-                if line[:-4] == (datos[0] + " sip:" + receptor + "@" + ip_ua +
-                                 " SIP/2.0"):
-                    self.wfile.write(b"SIP/2.0 200 OK\r\n\r\n")
-                else:
-                    self.wfile.write(b"SIP/2.0 400 Bad request\r\n\r\n")
+                    try:
+                        data = my_socket.recv(1024)
+                        print('Recibido -- ', data.decode('utf-8'))
+                        respuesta_ua = data.decode('utf-8')
+                        escribe_log(respuesta_ua, "recibo", ip_recibe + ":"
+                                    + str(puerto_recibe))
+                        self.wfile.write(data)
+                        escribe_log(respuesta_ua, "envio", ip_port_ua)
+                    except ConnectionRefusedError:
+                        escribe_log("No server listening at "+ ip_recibe +
+                                    " port " + str(puerto_recibe), "error")
+                        pass
             else:
                 self.wfile.write(b"SIP/2.0 405 Method Not Allowed")
     
@@ -169,12 +191,11 @@ if __name__ == "__main__":
     except IndexError:
         sys.exit("Usage: python proxy_registrar.py config")
     
-    print("Server ServerFBI listening at port 5555")
     
     archivo_xml = minidom.parse(config)
     xml_log = archivo_xml.getElementsByTagName('log')
     ruta_log = xml_log[0].attributes['path'].value
-    mi_log = open(ruta_log, "w")
+    mi_log = open(ruta_log, "a")
     xml_db = archivo_xml.getElementsByTagName('database')
     ruta_db = xml_db[0].attributes['path'].value
     mi_db = open(ruta_db, "w")
@@ -186,10 +207,9 @@ if __name__ == "__main__":
     escribe_log("Starting...", "otro")
     
     serv = socketserver.UDPServer((mi_IP, mi_puerto), ServerHandler)
+    print("Server ServerFBI listening at port " + str(mi_puerto))
     print("Listening...")
     try:
         serv.serve_forever()
     except KeyboardInterrupt:
         print("Finalizado servidor")
-
-
