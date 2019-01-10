@@ -159,6 +159,7 @@ class ServerHandler(socketserver.DatagramRequestHandler):
                         pass
             else:
                 self.wfile.write(b"SIP/2.0 405 Method Not Allowed")
+                escribe_log("SIP/2.0 405 Method Not Allowed", "error")
             self.elimina_expires()
 
     def elimina_expires(self):

@@ -63,6 +63,10 @@ class UAHandler(socketserver.DatagramRequestHandler):
                 respuesta_bye = "SIP/2.0 200 OK\r\n\r\n"
                 self.wfile.write(bytes(respuesta_bye, 'utf-8'))
                 escribe_log(respuesta_bye, "envio", ip_port_rp)
+            else:
+                respuesta = "SIP/2.0 405 Method Not Allowed\r\n\r\n"
+                self.wfile.write(bytes(respuesta, 'utf-8'))
+                escribe_log(respuesta_bye, "envio", ip_port_rp)
 
 
 if __name__ == "__main__":
