@@ -141,5 +141,6 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
         print("metodo no valido")
 
     print("Terminando socket...")
+    escribe_log("Finishing...", "otro")
 
 print("Fin.")

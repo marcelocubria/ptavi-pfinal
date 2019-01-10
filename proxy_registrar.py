@@ -215,3 +215,4 @@ if __name__ == "__main__":
         serv.serve_forever()
     except KeyboardInterrupt:
         print("Finalizado servidor")
+        escribe_log("Finishing...", "otro")
