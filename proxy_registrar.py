@@ -34,6 +34,7 @@ class ServerHandler(socketserver.DatagramRequestHandler):
         while 1:
             self.json2passwd()
             self.json2registered()
+            self.elimina_expires()
             # Leyendo línea a línea lo que nos envía el cliente
             line = self.rfile.read().decode('utf-8')
             # Si no hay más líneas salimos del bucle infinito

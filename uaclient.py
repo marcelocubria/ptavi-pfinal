@@ -125,6 +125,9 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
                              + audio_path)
             print("ejecutando " + aEjecutar)
             os.system(aEjecutar)
+        else:
+            msg_error = "Error, usuario no encontrado"
+            escribe_log(msg_error, "error")
     elif METODO == "bye":
         linea = ("BYE sip:" + OPCION + " SIP/2.0\r\n")
         print("Enviando: " + linea)
