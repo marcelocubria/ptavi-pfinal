@@ -161,6 +161,7 @@ class ServerHandler(socketserver.DatagramRequestHandler):
                 self.wfile.write(b"SIP/2.0 405 Method Not Allowed")
                 escribe_log("SIP/2.0 405 Method Not Allowed", "error")
             self.elimina_expires()
+            self.register2json()
 
     def elimina_expires(self):
         """elimina clientes que han expirado en el diccionario"""
@@ -168,6 +169,7 @@ class ServerHandler(socketserver.DatagramRequestHandler):
                                     time.gmtime(time.time()))
         for usuario in list(self.dicc_registro.keys()):
             if hora_actual >= self.dicc_registro[usuario]['expires']:
+                print("borro a " + usuario)
                 del self.dicc_registro[usuario]
 
     def json2passwd(self):
