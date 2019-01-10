@@ -96,8 +96,10 @@ class ServerHandler(socketserver.DatagramRequestHandler):
                 try:
                     ip_recibe = self.dicc_registro[ua_recibe]['IP']
                     puerto_recibe = self.dicc_registro[ua_recibe]['puerto']
-                    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
-                        my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                    with socket.socket(socket.AF_INET,
+                                       socket.SOCK_DGRAM) as my_socket:
+                        my_socket.setsockopt(socket.SOL_SOCKET,
+                                             socket.SO_REUSEADDR, 1)
                         my_socket.connect((ip_recibe, int(puerto_recibe)))
                         escribe_log(line, "envio", ip_recibe + ':' +
                                     str(puerto_recibe))
@@ -137,14 +139,14 @@ class ServerHandler(socketserver.DatagramRequestHandler):
                 escribe_log(line, "recibo", ip_port_ua)
                 ip_recibe = self.dicc_registro[ua_recibe]['IP']
                 puerto_recibe = self.dicc_registro[ua_recibe]['puerto']
-                with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
-                    my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                    my_socket.connect((ip_recibe, int(puerto_recibe)))
+                with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sckt:
+                    sckt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                    sckt.connect((ip_recibe, int(puerto_recibe)))
                     escribe_log(line, "envio", ip_recibe + ':' +
                                 str(puerto_recibe))
-                    my_socket.send(bytes(line, 'utf-8'))
+                    sckt.send(bytes(line, 'utf-8'))
                     try:
-                        data = my_socket.recv(1024)
+                        data = sckt.recv(1024)
                         print('Recibido -- ', data.decode('utf-8'))
                         respuesta_ua = data.decode('utf-8')
                         escribe_log(respuesta_ua, "recibo", ip_recibe + ":"
@@ -169,10 +171,11 @@ class ServerHandler(socketserver.DatagramRequestHandler):
 
     def json2passwd(self):
         try:
-            with open("passwords.json") as f:
+            with open("passwords") as f:
                 datos_json = json.load(f)
                 self.passwords = datos_json
-        except:
+        except FileNotFoundError:
+            print("error al cargar las contraseñas, fichero erroneo")
             pass
 
     def json2registered(self):
@@ -180,7 +183,8 @@ class ServerHandler(socketserver.DatagramRequestHandler):
             with open("registered.json") as f:
                 datos_json = json.load(f)
                 self.dicc_registro = datos_json
-        except:
+        except FileNotFoundError:
+            print("el fichero de registered.json no existe")
             pass
 
     def register2json(self):
