@@ -1,0 +1,4 @@
+Notas sobre la práctica
+
+-Los errores pep8 del proxy_registrar que quedan no he podido solucionarlos al ser demasiado largas las líneas del socketserver
+-La captura de error contiene también la baja del UA, ya que primero pone que se da registro y baja pero en los pasos a dar después no se menciona la baja
