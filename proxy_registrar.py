@@ -10,7 +10,8 @@ import json
 import random
 import socket
 
-def escribe_log(linea, tipo, ippuerto = 0):
+
+def escribe_log(linea, tipo, ippuerto=0):
     hora = time.strftime("%Y%m%d%H%M%S", time.localtime())
     linea = linea.replace("\r\n", " ")
     if tipo == "envio":
@@ -23,13 +24,13 @@ def escribe_log(linea, tipo, ippuerto = 0):
         linea_log = linea
     mi_log.write(hora + " " + linea_log + "\r\n")
 
-    
+
 class ServerHandler(socketserver.DatagramRequestHandler):
-    
+
     dicc_registro = {}
     passwords = {}
     nonce = []
-    
+
     def handle(self):
         while 1:
             self.json2passwd()
@@ -56,7 +57,7 @@ class ServerHandler(socketserver.DatagramRequestHandler):
                     passwd_cliente = self.passwords[usuario]
                     numero = str(random.getrandbits(128))
                     n = hashlib.sha256()
-                    n.update(passwd_cliente.encode('utf-8')) 
+                    n.update(passwd_cliente.encode('utf-8'))
                     n.update(numero.encode('utf-8'))
                     self.nonce.append(n.hexdigest())
                     respuesta_reg = "SIP/2.0 401 Unauthorized\r\n"
@@ -67,23 +68,22 @@ class ServerHandler(socketserver.DatagramRequestHandler):
                     if expires == 0:
                         del self.dicc_registro[usuario]
                 elif line[:-4] == ("REGISTER sip:" + receptor + "@" + ip_ua +
-                                 " SIP/2.0\r\nExpires: " + expires + "\r\n" +
-                                 'Authorization: Digest response="' +
-                                 self.nonce[0] + '"'):
+                                   " SIP/2.0\r\nExpires: " + expires + "\r\n" +
+                                   'Authorization: Digest response="' +
+                                   self.nonce[0] + '"'):
                     respuesta_ok = "SIP/2.0 200 OK\r\n\r\n"
                     self.wfile.write(bytes(respuesta_ok, 'utf-8'))
                     escribe_log(respuesta_ok, "envio", ip_port_ua)
-                    
                     info_usuario['usuario'] = usuario
                     info_usuario["IP"] = self.client_address[0]
                     info_usuario['puerto'] = datos[1].split(":")[2]
                     self.dicc_registro[usuario] = info_usuario
                     tiempo_inicio = time.strftime('%Y-%m-%d %H:%M:%S',
-                                               time.gmtime(time.time()))
+                                                  time.gmtime(time.time()))
                     self.dicc_registro[usuario]["inicio"] = tiempo_inicio
                     tiempo_fin = time.strftime('%Y-%m-%d %H:%M:%S',
-                                               time.gmtime(time.time()
-                                               + int(expires)))
+                                               time.gmtime(time.time() +
+                                                           int(expires)))
                     self.dicc_registro[usuario]["expires"] = tiempo_fin
                     del(self.nonce[0])
                 else:
@@ -111,14 +111,14 @@ class ServerHandler(socketserver.DatagramRequestHandler):
                             self.wfile.write(data)
                             escribe_log(respuesta_ua, "envio", ip_port_ua)
                         except ConnectionRefusedError:
-                            escribe_log("No server listening at "+ ip_recibe +
+                            escribe_log("No server listening at " + ip_recibe +
                                         " port " + str(puerto_recibe), "error")
                             pass
                 except KeyError:
                     respuesta_ua = "SIP/2.0 404 User not found\r\n\r\n"
                     self.wfile.write(bytes(respuesta_ua, 'utf-8'))
                     escribe_log(respuesta_ua, "envio", ip_port_ua)
-                    
+
             elif datos[0] == 'ACK':
                 print("Llega " + line)
                 ua_recibe = datos[1].split(':')[1]
@@ -152,12 +152,13 @@ class ServerHandler(socketserver.DatagramRequestHandler):
                         self.wfile.write(data)
                         escribe_log(respuesta_ua, "envio", ip_port_ua)
                     except ConnectionRefusedError:
-                        escribe_log("No server listening at "+ ip_recibe +
+                        escribe_log("No server listening at " + ip_recibe +
                                     " port " + str(puerto_recibe), "error")
                         pass
             else:
                 self.wfile.write(b"SIP/2.0 405 Method Not Allowed")
-    
+            self.elimina_expires()
+
     def elimina_expires(self):
         """elimina clientes que han expirado en el diccionario"""
         hora_actual = time.strftime('%Y-%m-%d %H:%M:%S',
@@ -165,7 +166,7 @@ class ServerHandler(socketserver.DatagramRequestHandler):
         for usuario in list(self.dicc_registro.keys()):
             if hora_actual >= self.dicc_registro[usuario]['expires']:
                 del self.dicc_registro[usuario]
-    
+
     def json2passwd(self):
         try:
             with open("passwords.json") as f:
@@ -173,7 +174,7 @@ class ServerHandler(socketserver.DatagramRequestHandler):
                 self.passwords = datos_json
         except:
             pass
-        
+
     def json2registered(self):
         try:
             with open("registered.json") as f:
@@ -181,18 +182,18 @@ class ServerHandler(socketserver.DatagramRequestHandler):
                 self.dicc_registro = datos_json
         except:
             pass
-        
+
     def register2json(self):
         with open("registered.json", 'w') as file:
             json.dump(self.dicc_registro, file)
+
 
 if __name__ == "__main__":
     try:
         config = sys.argv[1]
     except IndexError:
         sys.exit("Usage: python proxy_registrar.py config")
-    
-    
+
     archivo_xml = minidom.parse(config)
     xml_log = archivo_xml.getElementsByTagName('log')
     ruta_log = xml_log[0].attributes['path'].value
@@ -206,7 +207,7 @@ if __name__ == "__main__":
         mi_IP = "127.0.0.1"
     mi_puerto = int(xml_server[0].attributes['puerto'].value)
     escribe_log("Starting...", "otro")
-    
+
     serv = socketserver.UDPServer((mi_IP, mi_puerto), ServerHandler)
     print("Server ServerFBI listening at port " + str(mi_puerto))
     print("Listening...")
