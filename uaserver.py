@@ -90,6 +90,7 @@ if __name__ == "__main__":
     puerto_RTP = rtpaudio[0].attributes['puerto'].value
 
     serv = socketserver.UDPServer((mi_IP, int(mi_puerto)), UAHandler)
+    escribe_log("Starting...", "otro")
     try:
         serv.serve_forever()
     except KeyboardInterrupt:
